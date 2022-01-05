@@ -1,71 +1,140 @@
-# goss
-Github Object Storage System 使用 Github 构建类似 oss 的对象储存工具，本工具可以很方便的管理 github 数据，可以很方便的搭建图床
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# https://github.com/kennethreitz/setup.py/blob/master/setup.py
 
-***暂不支持 windows 系统***
+# Note: To use the 'upload' functionality of this file, you must:
+#   $ pip install twine
 
-**创建仓库**
+import io
+import os
+import sys
+from shutil import rmtree
 
-![goss1](https://raw.githubusercontent.com/wxnacy/image/master/blog/goss1.gif)
+from setuptools import find_packages, setup, Command
 
-**上传本地图片**
+# Package meta-data.
+NAME = 'goss'
+DESCRIPTION = 'Github Object Storage'
+URL = 'https://github.com/wxnacy/goss'
+EMAIL = 'wxnacy@gmail.com'
+AUTHOR = 'wxnacy'
+REQUIRES_PYTHON = '>=3.6.0'
+VERSION = None
 
-![goss2](https://raw.githubusercontent.com/wxnacy/image/master/blog/goss3.gif)
+# What packages are required for this module to be executed?
+REQUIRED = [
+    # 'requests', 'maya', 'records',
+    #  'click>=7.0',
+    #  'pyperclip>=1.7.0',
+    #  'gevent>=1.4.0',
+    #  'requests>=2.21.0'
+]
 
-## 安装
+# What packages are optional?
+EXTRAS = {
+    # 'fancy feature': ['django'],
+}
 
-使用 pip 安装非常方便
+# The rest you shouldn't have to touch too much :)
+# ------------------------------------------------
+# Except, perhaps the License and Trove Classifiers!
+# If you do change the License, remember to change the Trove Classifier for that!
 
-```bash
-$ pip install goss
-```
+here = os.path.abspath(os.path.dirname(__file__))
 
-**更新**
+# Import the README and use it as the long-description.
+# Note: this will only work if 'README.md' is present in your MANIFEST.in file!
+try:
+    with io.open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
+        long_description = '\n' + f.read()
+except FileNotFoundError:
+    long_description = DESCRIPTION
 
-```bash
-$ pip install --upgrade goss
-```
+# Load the package's __version__.py module as a dictionary.
+about = {}
+if not VERSION:
+    project_slug = NAME.lower().replace("-", "_").replace(" ", "_")
+    with open(os.path.join(here, project_slug, '__version__.py')) as f:
+        exec(f.read(), about)
+else:
+    about['__version__'] = VERSION
 
-## 快速开始
 
-goss 的命令格式基本遵守了 RESTful 风格
+class UploadCommand(Command):
+    """Support setup.py upload."""
 
-### 登录
+    description = 'Build and publish the package.'
+    user_options = []
 
-```bash
-$ goss-cli login
-```
+    @staticmethod
+    def status(s):
+        """Prints things in bold."""
+        print('\033[1m{0}\033[0m'.format(s))
 
-**配置**
+    def initialize_options(self):
+        pass
 
-```bash
-$ goss-cli config repo.name <repo-name> # 配置默认仓库名
-$ goss-cli config repo.path <path>      # 配置上传文件时默认的地址或目录，默认为根目录
-```
+    def finalize_options(self):
+        pass
 
-### 上传文件
+    def run(self):
+        try:
+            self.status('Removing previous builds…')
+            rmtree(os.path.join(here, 'dist'))
+        except OSError:
+            pass
 
-```bash
-$ goss <filepath|url>                   # 上传文件到默认的仓库和地址
-$ goss <filepath|url> -r <repo-name>    # 指定一个仓库
-$ goss <filepath|url> -p <path>         # 指定一个地址或目录
-```
+        self.status('Building Source and Wheel (universal) distribution…')
+        os.system('{0} setup.py sdist bdist_wheel --universal'.format(sys.executable))
 
-### 仓库管理
+        self.status('Uploading the package to PyPI via Twine…')
+        os.system('twine upload dist/*')
 
-```bash
-$ goss-cli repo                           # 查看仓库列表
-$ goss-cli repo <repo-name>               # 查看指定仓库
-$ goss-cli repo <repo-name> -m post       # 创建仓库
-$ goss-cli repo <repo-name> -m delete     # 删除仓库
-```
+        self.status('Pushing git tags…')
+        os.system('git tag v{0}'.format(about['__version__']))
+        os.system('git push --tags')
+        
+        sys.exit()
 
-### 文件管理
 
-```bash
-$ goss-cli file                     # 查看默认仓库根目录下所有文件
-$ goss-cli file <path>              # 查看指定文件详情或指定目录下文件列表
-$ goss-cli file -r <repo-name>      # 查看指定仓库
-$ goss-cli file <path> -m delete    # 删除指定文件
-```
+# Where the magic happens:
+setup(
+    name=NAME,
+    version=about['__version__'],
+    description=DESCRIPTION,
+    long_description=long_description,
+    long_description_content_type='text/markdown',
+    author=AUTHOR,
+    author_email=EMAIL,
+    python_requires=REQUIRES_PYTHON,
+    url=URL,
+    packages=find_packages(exclude=["gos", "tests", "*.tests", "*.tests.*", "tests.*"]),
+    # If your package is a single module, use this instead of 'packages':
+    # py_modules=['mypackage'],
 
-更多使用请使用帮助命令 `goss-cli --help` 或者 `goss-cli <cmd> --help`
+    entry_points={
+        'console_scripts': [
+            'goss=goss.cli.command:main',
+            'goss-cli=goss.app.run:run'
+        ],
+    },
+    install_requires=REQUIRED,
+    extras_require=EXTRAS,
+    include_package_data=True,
+    license='MIT',
+    classifiers=[
+        # Trove classifiers
+        # Full list: https://pypi.python.org/pypi?%3Aaction=list_classifiers
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: Implementation :: CPython',
+        'Programming Language :: Python :: Implementation :: PyPy'
+    ],
+    # $ setup.py publish support.
+    cmdclass={
+        'upload': UploadCommand,
+    },
+)
